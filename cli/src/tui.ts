@@ -7,12 +7,10 @@ export function attachTUI(
   password: string,
   cwd: string
 ): ChildProcess {
-  const child = spawn("opencode", ["--hostname", hostname, "--port", String(port)], {
+  const child = spawn("opencode", ["attach", `http://${hostname}:${port}`, "--username", username, "--password", password], {
     cwd,
     env: {
       ...process.env,
-      OPENCODE_SERVER_USERNAME: username,
-      OPENCODE_SERVER_PASSWORD: password,
     },
     stdio: "inherit",
   });

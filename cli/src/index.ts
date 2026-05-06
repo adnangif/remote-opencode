@@ -14,7 +14,7 @@ import {
   Config,
 } from "./config.js";
 import { checkServerHealth, startServer } from "./server.js";
-import { startTunnel } from "./tunnel.js";
+import { startTunnel, stopTunnel } from "./tunnel.js";
 import { generateQR } from "./qr.js";
 import { attachTUI } from "./tui.js";
 import { cleanup } from "./cleanup.js";
@@ -34,7 +34,7 @@ async function waitForEnter(): Promise<void> {
   });
 }
 
-async function main() {
+export async function main() {
   let config = loadConfig();
   const isFirstRun = config.ngrokAuthtoken === null;
 
@@ -59,6 +59,11 @@ async function main() {
   if (config.pid !== null) {
     if (!isPidAlive(config.pid)) {
       console.log(chalk.yellow("Found stale server entry. Cleaning up..."));
+      try {
+        await stopTunnel();
+      } catch {
+        // tunnel already dead
+      }
       clearDynamicFields();
       config = loadConfig();
     }
@@ -69,7 +74,7 @@ async function main() {
   let ngrokStarted = false;
   let isOwner = false;
 
-  const serverRunning = await checkServerHealth(config.hostname, config.port);
+  const serverRunning = await checkServerHealth(config.hostname, config.port, config.username ?? undefined, config.password ?? undefined);
 
   if (!serverRunning) {
     console.log(chalk.blue("Starting opencode web server..."));
@@ -136,7 +141,9 @@ async function main() {
 
   const gracefulCleanup = async () => {
     if (isOwner) {
+      console.log(chalk.yellow("\nCleaning up..."));
       await cleanup(serverProcess, ngrokStarted, config);
+      console.log(chalk.green("Done."));
     }
   };
 
@@ -152,12 +159,20 @@ async function main() {
   }
 
   tui.on("exit", async (code) => {
+    if (handledSignals.size > 0) return;
+    handledSignals.add("exit");
     await gracefulCleanup();
     process.exit(code ?? 0);
   });
 }
 
-main().catch((err) => {
-  console.error(chalk.red(`Error: ${err.message}`));
-  process.exit(1);
-});
+const isDirectRun =
+  process.argv[1] &&
+  (process.argv[1].endsWith("index.js") || process.argv[1].endsWith("index.ts"));
+
+if (isDirectRun) {
+  main().catch((err) => {
+    console.error(chalk.red(`Error: ${err.message}`));
+    process.exit(1);
+  });
+}

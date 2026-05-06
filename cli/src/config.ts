@@ -14,10 +14,17 @@ export interface Config {
   ngrokUrl: string | null;
 }
 
-const CONFIG_FILENAME = ".opencode-proxy.json";
+export const CONFIG_FILENAME = ".opencode-proxy.json";
+
+let _configDir: string | null = null;
+
+export function setConfigDir(dir: string | null): void {
+  _configDir = dir;
+}
 
 export function getConfigPath(): string {
-  return path.join(os.homedir(), CONFIG_FILENAME);
+  const dir = _configDir ?? os.homedir();
+  return path.join(dir, CONFIG_FILENAME);
 }
 
 export function loadConfig(): Config {
@@ -43,12 +50,17 @@ export function saveConfig(config: Config): void {
 }
 
 export function clearDynamicFields(configPath?: string): void {
-  const config = loadConfig();
+  const target = configPath ?? getConfigPath();
+  let config: Config;
+  try {
+    config = JSON.parse(fs.readFileSync(target, "utf-8")) as Config;
+  } catch {
+    return;
+  }
   config.pid = null;
   config.username = null;
   config.password = null;
   config.ngrokUrl = null;
-  const target = configPath ?? getConfigPath();
   fs.writeFileSync(target, JSON.stringify(config, null, 2) + "\n", "utf-8");
 }
 
