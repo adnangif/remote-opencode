@@ -160,7 +160,10 @@ program
 
     const authUrl = getAuthUrl(config);
     console.log(`URL: ${chalk.underline(config.ngrokUrl!)}`);
-    console.log(`Auth URL: ${chalk.underline(authUrl)}\n`);
+    console.log(`Auth URL: ${chalk.underline(authUrl)}`);
+    console.log(`Username: ${config.username}`);
+    console.log(`Password: ${config.password}`);
+    console.log(`\nAttach: opencode attach http://${config.hostname}:${config.port} --username ${config.username} --password ${config.password}\n`);
     await generateQR(authUrl);
     process.exit(0);
   });
