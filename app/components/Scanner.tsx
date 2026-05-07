@@ -27,11 +27,16 @@ export function Scanner({ onScanned }: ScannerProps) {
   }
 
   return (
-    <CameraView
-      style={StyleSheet.absoluteFillObject}
-      facing="back"
-      onBarcodeScanned={({ data }) => onScanned(data)}
-    />
+    <View style={StyleSheet.absoluteFillObject}>
+      <CameraView
+        style={StyleSheet.absoluteFillObject}
+        facing="back"
+        onBarcodeScanned={({ data }) => onScanned(data)}
+      />
+      <View style={styles.hint}>
+        <Text style={styles.hintText}>Scan ROC QR code</Text>
+      </View>
+    </View>
   );
 }
 
@@ -45,5 +50,19 @@ const styles = StyleSheet.create({
   text: {
     color: "#fff",
     fontSize: 16,
+  },
+  hint: {
+    position: "absolute",
+    bottom: 100,
+    alignSelf: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+  },
+  hintText: {
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: "500",
   },
 });
