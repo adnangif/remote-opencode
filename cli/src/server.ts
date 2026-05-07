@@ -1,23 +1,38 @@
-import { spawn, ChildProcess } from "node:child_process";
+import { spawn } from "node:child_process";
 import { Config, saveConfig, generateCredentials } from "./config.js";
+import { killProcess } from "./process-utils.js";
 
-const HEALTH_TIMEOUT_MS = 30000;
-const HEALTH_POLL_INTERVAL_MS = 1000;
+export { isProcessAlive } from "./process-utils.js";
+
+const START_TIMEOUT_MS = 30_000;
+const HEALTH_POLL_INTERVAL_MS = 1_000;
+
+export async function isServerReachable(hostname: string, port: number): Promise<boolean> {
+  try {
+    const url = `http://${hostname}:${port}/global/health`;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 5_000);
+    await fetch(url, { signal: controller.signal });
+    clearTimeout(timer);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export async function checkServerHealth(
   hostname: string,
   port: number,
-  username?: string,
-  password?: string
+  username: string,
+  password: string
 ): Promise<boolean> {
   try {
     const url = `http://${hostname}:${port}/global/health`;
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 5000);
-    const headers: Record<string, string> = {};
-    if (username && password) {
-      headers["Authorization"] = `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}`;
-    }
+    const timer = setTimeout(() => controller.abort(), 5_000);
+    const headers: Record<string, string> = {
+      Authorization: `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}`,
+    };
     const res = await fetch(url, { signal: controller.signal, headers });
     clearTimeout(timer);
     return res.ok;
@@ -26,30 +41,8 @@ export async function checkServerHealth(
   }
 }
 
-export async function waitForServer(
-  hostname: string,
-  port: number,
-  username?: string,
-  password?: string
-): Promise<boolean> {
-  const start = Date.now();
-  while (Date.now() - start < HEALTH_TIMEOUT_MS) {
-    if (await checkServerHealth(hostname, port, username, password)) {
-      return true;
-    }
-    await new Promise((r) => setTimeout(r, HEALTH_POLL_INTERVAL_MS));
-  }
-  return false;
-}
-
-export async function startServer(
-  config: Config,
-  cwd: string
-): Promise<{ child: ChildProcess; username: string; password: string }> {
+export async function startServer(config: Config, cwd: string): Promise<void> {
   const { username, password } = generateCredentials();
-
-  config.username = username;
-  config.password = password;
 
   const child = spawn("opencode", ["serve", "--hostname", config.hostname, "--port", String(config.port)], {
     cwd,
@@ -62,15 +55,35 @@ export async function startServer(
     stdio: "ignore",
     detached: true,
   });
+  child.unref();
 
-  config.pid = child.pid!;
+  config.opencodePid = child.pid!;
+  config.username = username;
+  config.password = password;
   saveConfig(config);
 
-  const healthy = await waitForServer(config.hostname, config.port, username, password);
-  if (!healthy) {
-    child.kill("SIGTERM");
-    throw new Error("opencode web server did not start within 30 seconds");
+  const start = Date.now();
+  let healthy = false;
+  while (Date.now() - start < START_TIMEOUT_MS) {
+    healthy = await checkServerHealth(config.hostname, config.port, username, password);
+    if (healthy) break;
+    await new Promise((r) => setTimeout(r, HEALTH_POLL_INTERVAL_MS));
   }
 
-  return { child, username, password };
+  if (!healthy) {
+    killProcess(config.opencodePid);
+    config.opencodePid = null;
+    config.username = null;
+    config.password = null;
+    saveConfig(config);
+    throw new Error("opencode server did not start within 30 seconds");
+  }
+}
+
+export function stopServer(config: Config): void {
+  killProcess(config.opencodePid);
+  config.opencodePid = null;
+  config.username = null;
+  config.password = null;
+  saveConfig(config);
 }

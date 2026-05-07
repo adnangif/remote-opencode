@@ -8,23 +8,17 @@ export interface Config {
   hostname: string;
   port: number;
   ngrokAuthtoken: string | null;
-  pid: number | null;
   username: string | null;
   password: string | null;
   ngrokUrl: string | null;
+  tunnelWorkerPid: number | null;
+  opencodePid: number | null;
 }
 
 export const CONFIG_FILENAME = ".opencode-proxy.json";
 
-let _configDir: string | null = null;
-
-export function setConfigDir(dir: string | null): void {
-  _configDir = dir;
-}
-
 export function getConfigPath(): string {
-  const dir = _configDir ?? os.homedir();
-  return path.join(dir, CONFIG_FILENAME);
+  return path.join(os.homedir(), CONFIG_FILENAME);
 }
 
 export function loadConfig(): Config {
@@ -34,34 +28,33 @@ export function loadConfig(): Config {
       hostname: "localhost",
       port: 4096,
       ngrokAuthtoken: null,
-      pid: null,
       username: null,
       password: null,
       ngrokUrl: null,
+      tunnelWorkerPid: null,
+      opencodePid: null,
     };
   }
-  const raw = fs.readFileSync(configPath, "utf-8");
-  return JSON.parse(raw) as Config;
+  try {
+    const raw = fs.readFileSync(configPath, "utf-8");
+    return JSON.parse(raw) as Config;
+  } catch {
+    return {
+      hostname: "localhost",
+      port: 4096,
+      ngrokAuthtoken: null,
+      username: null,
+      password: null,
+      ngrokUrl: null,
+      tunnelWorkerPid: null,
+      opencodePid: null,
+    };
+  }
 }
 
 export function saveConfig(config: Config): void {
   const configPath = getConfigPath();
   fs.writeFileSync(configPath, JSON.stringify(config, null, 2) + "\n", "utf-8");
-}
-
-export function clearDynamicFields(configPath?: string): void {
-  const target = configPath ?? getConfigPath();
-  let config: Config;
-  try {
-    config = JSON.parse(fs.readFileSync(target, "utf-8")) as Config;
-  } catch {
-    return;
-  }
-  config.pid = null;
-  config.username = null;
-  config.password = null;
-  config.ngrokUrl = null;
-  fs.writeFileSync(target, JSON.stringify(config, null, 2) + "\n", "utf-8");
 }
 
 export function generateCredentials(): { username: string; password: string } {
@@ -83,13 +76,4 @@ export async function promptNgrokAuthtoken(): Promise<string> {
       resolve(answer.trim());
     });
   });
-}
-
-export function isPidAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch {
-    return false;
-  }
 }

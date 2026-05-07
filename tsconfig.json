@@ -8,6 +8,8 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
+    "outDir": "cli/dist",
+    "rootDir": "cli/src",
     "types": ["node"]
   },
   "include": ["cli/src/**/*.ts"],

@@ -1,28 +1,35 @@
-import ngrok from "@ngrok/ngrok";
+import { fork } from "node:child_process";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { Config, saveConfig } from "./config.js";
+import { killProcess, waitForIpcMessage } from "./process-utils.js";
 
-let activeListener: Awaited<ReturnType<typeof ngrok.forward>> | null = null;
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-export async function startTunnel(config: Config): Promise<string> {
-  activeListener = await ngrok.forward({
-    addr: `${config.hostname}:${config.port}`,
-    authtoken: config.ngrokAuthtoken!,
+type TunnelReady = { type: "ready"; url: string };
+
+export async function startTunnel(config: Config): Promise<void> {
+  const workerPath = path.join(__dirname, "tunnel-worker.js");
+  const child = fork(workerPath, [config.ngrokAuthtoken!, config.hostname, String(config.port)], {
+    detached: true,
+    stdio: ["ignore", "ignore", "ignore", "ipc"],
   });
+  child.unref();
 
-  const url = activeListener.url()!;
-  config.ngrokUrl = url;
+  const msg = await waitForIpcMessage<TunnelReady>(child, "Tunnel worker");
+
+  if (msg.type === "error") {
+    throw new Error(msg.message);
+  }
+
+  config.tunnelWorkerPid = child.pid!;
+  config.ngrokUrl = msg.url;
   saveConfig(config);
-
-  return url;
 }
 
-export async function stopTunnel(): Promise<void> {
-  try {
-    if (activeListener) {
-      await activeListener.close();
-      activeListener = null;
-    }
-  } catch {
-    // tunnel may already be dead
-  }
+export function stopTunnel(config: Config): void {
+  killProcess(config.tunnelWorkerPid);
+  config.tunnelWorkerPid = null;
+  config.ngrokUrl = null;
+  saveConfig(config);
 }
