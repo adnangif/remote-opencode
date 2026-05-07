@@ -21,11 +21,9 @@ export function Browser({ url, username, password, webViewRef }: BrowserProps) {
         ref={webViewRef}
         source={{
           uri: url,
-          headers: {
-            "ngrok-skip-browser-warning": "true",
-          },
         }}
         basicAuthCredential={{ username, password }}
+        userAgent="OpencodeRemote/1.0"
         style={styles.webview}
         cacheEnabled={false}
         javaScriptEnabled={true}
