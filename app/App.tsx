@@ -92,7 +92,7 @@ function AppInner() {
     return (
       <View style={styles.container}>
         <Landing onScan={() => setShowScanner(true)} />
-        <StatusBar style="light" />
+        <StatusBar style="dark" />
       </View>
     );
   }
