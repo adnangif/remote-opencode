@@ -1,0 +1,47 @@
+{
+  "expo": {
+    "name": "Opencode Remote",
+    "slug": "opencode-remote",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.CAMERA"
+      ],
+      "package": "com.roc.opencoderemote"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow $(PRODUCT_NAME) to access camera for QR code scanning."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "b534e2f8-c5a7-49a8-b8b3-5edd70d32c29"
+      }
+    }
+  }
+}
