@@ -4,7 +4,7 @@
   "description": "CLI to remotely access opencode via ngrok tunnel with QR code",
   "type": "module",
   "bin": {
-    "opencode-remote": "./dist/index.js"
+    "roc": "./dist/index.js"
   },
   "scripts": {
     "build": "tsc",

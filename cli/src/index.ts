@@ -64,7 +64,7 @@ function getAuthUrl(config: Config): string {
 }
 
 const program = new Command();
-program.name("remote").description("Remotely access opencode via ngrok tunnel");
+program.name("roc").description("Remotely access opencode via ngrok tunnel");
 
 program
   .command("up")
