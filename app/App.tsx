@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { StyleSheet, TouchableOpacity, Text, View, Animated } from "react-native";
+import { StyleSheet, TouchableOpacity, Text, View, Animated, BackHandler } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { WebView } from "react-native-webview";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
@@ -24,6 +24,7 @@ function AppInner() {
   const [dotExpanded, setDotExpanded] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const webViewRef = useRef<WebView | null>(null);
+  const canGoBackRef = useRef(false);
   const revertTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const animWidth = useRef(new Animated.Value(DOT_SIZE)).current;
@@ -63,6 +64,30 @@ function AppInner() {
       };
     }
   }, [dotExpanded]);
+
+  useEffect(() => {
+    const handler = BackHandler.addEventListener("hardwareBackPress", () => {
+      if (showScanner) {
+        setShowScanner(false);
+        collapseDot();
+        return true;
+      }
+      if (auth && canGoBackRef.current) {
+        webViewRef.current?.goBack();
+        return true;
+      }
+      if (auth) {
+        setAuth(null);
+        return true;
+      }
+      return false;
+    });
+    return () => handler.remove();
+  }, [showScanner, auth]);
+
+  function handleCanGoBack(canGoBack: boolean) {
+    canGoBackRef.current = canGoBack;
+  }
 
   function handleDotPress() {
     if (!dotExpanded) {
@@ -140,6 +165,7 @@ function AppInner() {
         username={auth.username}
         password={auth.password}
         webViewRef={webViewRef}
+        onCanGoBack={handleCanGoBack}
       />
       <Animated.View
         style={[

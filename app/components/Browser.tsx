@@ -1,3 +1,4 @@
+import { useState, useCallback } from "react";
 import { StyleSheet, View, Text, Linking, Alert } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import WebView from "react-native-webview";
@@ -7,10 +8,15 @@ interface BrowserProps {
   username: string;
   password: string;
   webViewRef: React.RefObject<WebView | null>;
+  onCanGoBack?: (canGoBack: boolean) => void;
 }
 
-export function Browser({ url, username, password, webViewRef }: BrowserProps) {
+export function Browser({ url, username, password, webViewRef, onCanGoBack }: BrowserProps) {
   const insets = useSafeAreaInsets();
+
+  const handleNavigationStateChange = useCallback((navState: { canGoBack?: boolean }) => {
+    onCanGoBack?.(navState.canGoBack ?? false);
+  }, [onCanGoBack]);
 
   function handleShouldStartLoad(request: { url: string }) {
     const { url: navUrl } = request;
@@ -46,6 +52,7 @@ export function Browser({ url, username, password, webViewRef }: BrowserProps) {
         allowFileAccessFromFileURLs={false}
         allowUniversalAccessFromFileURLs={false}
         onShouldStartLoadWithRequest={handleShouldStartLoad}
+        onNavigationStateChange={handleNavigationStateChange}
       />
       <View style={{ height: insets.bottom }} />
     </View>
