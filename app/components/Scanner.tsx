@@ -1,3 +1,4 @@
+import { useState, useCallback } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 
@@ -7,6 +8,13 @@ interface ScannerProps {
 
 export function Scanner({ onScanned }: ScannerProps) {
   const [permission, requestPermission] = useCameraPermissions();
+  const [scanned, setScanned] = useState(false);
+
+  const handleBarcodeScanned = useCallback(({ data }: { data: string }) => {
+    if (scanned) return;
+    setScanned(true);
+    onScanned(data);
+  }, [scanned, onScanned]);
 
   if (!permission) {
     return (
@@ -31,7 +39,7 @@ export function Scanner({ onScanned }: ScannerProps) {
       <CameraView
         style={StyleSheet.absoluteFillObject}
         facing="back"
-        onBarcodeScanned={({ data }) => onScanned(data)}
+        onBarcodeScanned={handleBarcodeScanned}
       />
       <View style={styles.hint}>
         <Text style={styles.hintText}>Scan ROC QR code</Text>
