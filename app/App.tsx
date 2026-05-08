@@ -1,12 +1,15 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { StyleSheet, TouchableOpacity, Text, View, Alert, Animated } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { WebView } from "react-native-webview";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { Scanner } from "./components/Scanner";
 import { Browser } from "./components/Browser";
 import { Landing } from "./components/Landing";
 import { parseAuthUrl, ParsedAuth } from "./utils/parseAuthUrl";
+import { loadRecentLinks, addRecentLink, RecentLink } from "./utils/storage";
+import { queryClient } from "./utils/queryClient";
 
 const DOT_SIZE = 16;
 const EXPANDED_WIDTH = 80;
@@ -16,6 +19,7 @@ function AppInner() {
   const insets = useSafeAreaInsets();
   const [auth, setAuth] = useState<ParsedAuth | null>(null);
   const [showScanner, setShowScanner] = useState(false);
+  const [recentLinks, setRecentLinks] = useState<RecentLink[]>([]);
   const [dotExpanded, setDotExpanded] = useState(false);
   const webViewRef = useRef<WebView | null>(null);
   const revertTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -24,6 +28,10 @@ function AppInner() {
   const animHeight = useRef(new Animated.Value(DOT_SIZE)).current;
   const animRadius = useRef(new Animated.Value(DOT_SIZE / 2)).current;
   const labelOpacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    loadRecentLinks().then(setRecentLinks);
+  }, []);
 
   function expandDot() {
     setDotExpanded(true);
@@ -65,16 +73,28 @@ function AppInner() {
     }
   }
 
-  function handleScanned(data: string) {
+  const handleScanned = useCallback(async (data: string) => {
     const parsed = parseAuthUrl(data);
     if (!parsed) {
       Alert.alert("Invalid QR", "This QR code does not contain a valid auth URL.");
       return;
     }
+    const updated = await addRecentLink(parsed);
+    setRecentLinks(updated);
     setAuth(parsed);
     setShowScanner(false);
     collapseDot();
-  }
+  }, []);
+
+  const handleLinkPress = useCallback(async (link: RecentLink) => {
+    const updated = await addRecentLink({
+      url: link.url,
+      username: link.username,
+      password: link.password,
+    });
+    setRecentLinks(updated);
+    setAuth({ url: link.url, username: link.username, password: link.password });
+  }, []);
 
   if (showScanner) {
     return (
@@ -91,7 +111,11 @@ function AppInner() {
   if (!auth) {
     return (
       <View style={styles.container}>
-        <Landing onScan={() => setShowScanner(true)} />
+        <Landing
+          onScan={() => setShowScanner(true)}
+          recentLinks={recentLinks}
+          onLinkPress={handleLinkPress}
+        />
         <StatusBar style="dark" />
       </View>
     );
@@ -172,8 +196,10 @@ const styles = StyleSheet.create({
 
 export default function App() {
   return (
-    <SafeAreaProvider>
-      <AppInner />
-    </SafeAreaProvider>
+    <QueryClientProvider client={queryClient}>
+      <SafeAreaProvider>
+        <AppInner />
+      </SafeAreaProvider>
+    </QueryClientProvider>
   );
 }
