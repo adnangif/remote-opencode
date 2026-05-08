@@ -1,4 +1,4 @@
-import { StyleSheet, View, Text } from "react-native";
+import { StyleSheet, View, Text, Linking, Alert } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import WebView from "react-native-webview";
 
@@ -11,6 +11,22 @@ interface BrowserProps {
 
 export function Browser({ url, username, password, webViewRef }: BrowserProps) {
   const insets = useSafeAreaInsets();
+
+  function handleShouldStartLoad(request: { url: string }) {
+    const { url: navUrl } = request;
+
+    if (navUrl.startsWith("https://") || navUrl.startsWith("http://")) {
+      return true;
+    }
+
+    Linking.canOpenURL(navUrl).then((supported) => {
+      if (supported) {
+        Linking.openURL(navUrl);
+      }
+    });
+
+    return false;
+  }
 
   return (
     <View style={styles.container}>
@@ -27,6 +43,9 @@ export function Browser({ url, username, password, webViewRef }: BrowserProps) {
         style={styles.webview}
         cacheEnabled={false}
         javaScriptEnabled={true}
+        allowFileAccessFromFileURLs={false}
+        allowUniversalAccessFromFileURLs={false}
+        onShouldStartLoadWithRequest={handleShouldStartLoad}
       />
       <View style={{ height: insets.bottom }} />
     </View>
