@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { StyleSheet, TouchableOpacity, Text, View, Alert, Animated } from "react-native";
+import { StyleSheet, TouchableOpacity, Text, View, Animated } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { WebView } from "react-native-webview";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
@@ -7,7 +7,8 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Scanner } from "./components/Scanner";
 import { Browser } from "./components/Browser";
 import { Landing } from "./components/Landing";
-import { parseAuthUrl, ParsedAuth } from "./utils/parseAuthUrl";
+import { ErrorModal } from "./components/ErrorModal";
+import { parseAuthUrl, ParsedAuth, ParseResult } from "./utils/parseAuthUrl";
 import { loadRecentLinks, addRecentLink, RecentLink } from "./utils/storage";
 import { queryClient } from "./utils/queryClient";
 
@@ -21,6 +22,7 @@ function AppInner() {
   const [showScanner, setShowScanner] = useState(false);
   const [recentLinks, setRecentLinks] = useState<RecentLink[]>([]);
   const [dotExpanded, setDotExpanded] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const webViewRef = useRef<WebView | null>(null);
   const revertTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -74,14 +76,18 @@ function AppInner() {
   }
 
   const handleScanned = useCallback(async (data: string) => {
-    const parsed = parseAuthUrl(data);
-    if (!parsed) {
-      Alert.alert("Invalid QR", "This QR code does not contain a valid auth URL.");
+    const result = parseAuthUrl(data);
+    if (!result.ok) {
+      const message =
+        result.reason === "unrecognized_url"
+          ? "Unrecognized URL. Only ngrok links are supported."
+          : "This QR code does not contain a valid auth URL.";
+      setErrorMsg(message);
       return;
     }
-    const updated = await addRecentLink(parsed);
+    const updated = await addRecentLink(result.data);
     setRecentLinks(updated);
-    setAuth(parsed);
+    setAuth(result.data);
     setShowScanner(false);
     collapseDot();
   }, []);
@@ -103,6 +109,12 @@ function AppInner() {
         <TouchableOpacity style={styles.closeScanner} onPress={() => { setShowScanner(false); collapseDot(); }}>
           <Text style={styles.closeScannerText}>✕</Text>
         </TouchableOpacity>
+        <ErrorModal
+          visible={errorMsg !== null}
+          message={errorMsg ?? ""}
+          onCancel={() => { setErrorMsg(null); setShowScanner(false); collapseDot(); }}
+          onRetry={() => { setErrorMsg(null); }}
+        />
         <StatusBar style="light" />
       </View>
     );
