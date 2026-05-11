@@ -60,6 +60,7 @@ export function Browser({ url, username, password, webViewRef, onCanGoBack }: Br
         style={styles.webview}
         cacheEnabled={false}
         javaScriptEnabled={true}
+        nestedScrollEnabled={true}
         allowFileAccessFromFileURLs={false}
         allowUniversalAccessFromFileURLs={false}
         onShouldStartLoadWithRequest={handleShouldStartLoad}
