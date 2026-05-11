@@ -167,27 +167,6 @@ function AppInner() {
         webViewRef={webViewRef}
         onCanGoBack={handleCanGoBack}
       />
-      <Animated.View
-        style={[
-          styles.scanDot,
-          {
-            bottom: 28 + insets.bottom,
-            width: animWidth,
-            height: animHeight,
-            borderRadius: animRadius,
-          },
-        ]}
-      >
-        <TouchableOpacity
-          style={[StyleSheet.absoluteFill, { alignItems: "center", justifyContent: "center" }]}
-          activeOpacity={0.7}
-          onPress={handleDotPress}
-        >
-          <Animated.Text style={[styles.scanDotText, { opacity: labelOpacity }]}>
-            Scan
-          </Animated.Text>
-        </TouchableOpacity>
-      </Animated.View>
       <StatusBar style="light" />
     </View>
   );
