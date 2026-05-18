@@ -137,11 +137,6 @@ program
     const config = loadConfig();
     const status = await getServicesStatus(config);
     printStatus(status, config);
-
-    if (status.tunnelUp && config.username && config.password && status.ngrokUrl) {
-      const authUrl = getAuthUrl(config);
-      console.log(`\n   URL: ${chalk.underline(authUrl)}`);
-    }
     process.exit(0);
   });
 
