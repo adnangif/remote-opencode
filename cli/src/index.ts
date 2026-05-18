@@ -2,7 +2,7 @@
 
 import chalk from "chalk";
 import { Command } from "commander";
-import { loadConfig, saveConfig, promptNgrokAuthtoken, Config } from "./config.js";
+import { loadConfig, saveConfig, promptNgrokAuthtoken, promptMasked, promptWithDefault, getConfigPath, Config } from "./config.js";
 import { startServer, stopServer, checkServerHealth, isServerReachable, isProcessAlive } from "./server.js";
 import { startTunnel, stopTunnel } from "./tunnel.js";
 import { generateQR } from "./qr.js";
@@ -161,6 +161,67 @@ program
     console.log(`\nAttach: opencode attach http://${config.hostname}:${config.port} --username ${config.username} --password ${config.password}\n`);
     await generateQR(authUrl);
     process.exit(0);
+  });
+
+program
+  .command("configure")
+  .description("Setup and manage CLI configuration")
+  .option("-s, --show", "Show current configuration")
+  .option("--hostname <hostname>", "Set hostname")
+  .option("--port <port>", "Set port")
+  .option("--authtoken <token>", "Set ngrok authtoken")
+  .action(async (options: { show?: boolean; hostname?: string; port?: string; authtoken?: string }) => {
+    const config = loadConfig();
+
+    if (options.show) {
+      console.log(chalk.cyan("Current configuration:\n"));
+      console.log(`  Config file: ${chalk.gray(getConfigPath())}`);
+      console.log(`  Hostname:    ${config.hostname}`);
+      console.log(`  Port:        ${config.port}`);
+      console.log(`  Authtoken:   ${config.ngrokAuthtoken ? chalk.green("****" + config.ngrokAuthtoken.slice(-4)) : chalk.red("not set")}`);
+      console.log(`  Username:    ${config.username ?? chalk.gray("auto-generated on up")}`);
+      console.log(`  Password:    ${config.password ? "****" : chalk.gray("auto-generated on up")}`);
+      process.exit(0);
+    }
+
+    const hasFlags = options.hostname || options.port || options.authtoken;
+    if (hasFlags) {
+      if (options.hostname) config.hostname = options.hostname;
+      if (options.port) {
+        const port = parseInt(options.port, 10);
+        if (isNaN(port) || port < 1 || port > 65535) {
+          console.log(chalk.red("Invalid port. Must be a number between 1 and 65535."));
+          process.exit(1);
+        }
+        config.port = port;
+      }
+      if (options.authtoken) config.ngrokAuthtoken = options.authtoken;
+      saveConfig(config);
+      console.log(chalk.green("✅ Configuration updated."));
+      process.exit(0);
+    }
+
+    console.log(chalk.cyan("Interactive configuration setup\n"));
+    console.log(`Get your ngrok authtoken at: ${chalk.underline("https://dashboard.ngrok.com/get-started/your-authtoken")}\n`);
+
+    const authtokenInput = await promptMasked("ngrok authtoken", config.ngrokAuthtoken ?? "");
+    if (authtokenInput) {
+      config.ngrokAuthtoken = authtokenInput;
+    }
+
+    const hostnameInput = await promptWithDefault("Hostname", config.hostname);
+    config.hostname = hostnameInput;
+
+    const portStr = await promptWithDefault("Port", String(config.port));
+    const port = parseInt(portStr, 10);
+    if (isNaN(port) || port < 1 || port > 65535) {
+      console.log(chalk.red("Invalid port. Must be a number between 1 and 65535."));
+      process.exit(1);
+    }
+    config.port = port;
+
+    saveConfig(config);
+    console.log(chalk.green("\n✅ Configuration saved."));
   });
 
 program

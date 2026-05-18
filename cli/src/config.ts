@@ -77,3 +77,40 @@ export async function promptNgrokAuthtoken(): Promise<string> {
     });
   });
 }
+
+export function maskToken(token: string, visibleCount: number = 10): string {
+  if (token.length <= visibleCount) return token;
+  return token.slice(0, visibleCount) + "*".repeat(token.length - visibleCount);
+}
+
+export async function promptMasked(question: string, currentValue: string): Promise<string> {
+  const rl = createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  return new Promise((resolve) => {
+    const suffix = currentValue ? ` (${maskToken(currentValue)})` : "";
+    const hint = currentValue ? " [press Enter to keep existing]" : "";
+    rl.question(`${question}${suffix}${hint}: `, (answer) => {
+      rl.close();
+      resolve(answer.trim());
+    });
+  });
+}
+
+export async function promptWithDefault(question: string, defaultValue: string): Promise<string> {
+  const rl = createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  return new Promise((resolve) => {
+    const suffix = defaultValue ? ` (${defaultValue})` : "";
+    const hint = defaultValue ? " [press Enter to keep existing]" : "";
+    rl.question(`${question}${suffix}${hint}: `, (answer) => {
+      rl.close();
+      resolve(answer.trim() || defaultValue);
+    });
+  });
+}
