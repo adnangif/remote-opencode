@@ -30,9 +30,10 @@ export async function checkServerHealth(
     const url = `http://${hostname}:${port}/global/health`;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 5_000);
-    const headers: Record<string, string> = {
-      Authorization: `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}`,
-    };
+    const headers: Record<string, string> = {};
+    if (username && password) {
+      headers.Authorization = `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}`;
+    }
     const res = await fetch(url, { signal: controller.signal, headers });
     clearTimeout(timer);
     return res.ok;
@@ -42,24 +43,38 @@ export async function checkServerHealth(
 }
 
 export async function startServer(config: Config, cwd: string): Promise<void> {
-  const { username, password } = generateCredentials();
+  let username: string;
+  let password: string;
+
+  const env: Record<string, string | undefined> = {
+    ...process.env,
+    BROWSER: "none",
+  };
+
+  if (config.tunnelProvider === "tailscale") {
+    username = "";
+    password = "";
+    delete env.OPENCODE_SERVER_USERNAME;
+    delete env.OPENCODE_SERVER_PASSWORD;
+  } else {
+    const creds = generateCredentials();
+    username = creds.username;
+    password = creds.password;
+    env.OPENCODE_SERVER_USERNAME = username;
+    env.OPENCODE_SERVER_PASSWORD = password;
+  }
 
   const child = spawn("opencode", ["serve", "--hostname", config.hostname, "--port", String(config.port)], {
     cwd,
-    env: {
-      ...process.env,
-      OPENCODE_SERVER_USERNAME: username,
-      OPENCODE_SERVER_PASSWORD: password,
-      BROWSER: "none",
-    },
+    env,
     stdio: "ignore",
     detached: true,
   });
   child.unref();
 
   config.opencodePid = child.pid!;
-  config.username = username;
-  config.password = password;
+  config.username = username || null;
+  config.password = password || null;
   saveConfig(config);
 
   const start = Date.now();

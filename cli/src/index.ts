@@ -2,47 +2,47 @@
 
 import chalk from "chalk";
 import { Command } from "commander";
-import { loadConfig, saveConfig, promptNgrokAuthtoken, promptMasked, promptWithDefault, getConfigPath, Config } from "./config.js";
+import { loadConfig, saveConfig, promptNgrokAuthtoken, promptMasked, promptWithDefault, getConfigPath, Config, getTunnelUrl } from "./config.js";
 import { startServer, stopServer, checkServerHealth, isServerReachable, isProcessAlive } from "./server.js";
-import { startTunnel, stopTunnel } from "./tunnel.js";
+import { startTunnel, stopTunnel, isTunnelUp } from "./tunnel.js";
 import { generateQR } from "./qr.js";
 import { attachTUI } from "./tui.js";
 
 interface ServicesStatus {
   serverUp: boolean;
   tunnelUp: boolean;
-  ngrokUrl: string | null;
+  tunnelUrl: string | null;
 }
 
 async function getServicesStatus(config: Config): Promise<ServicesStatus> {
   const serverUp = await isServerReachable(config.hostname, config.port);
-
-  const tunnelUp =
-    config.tunnelWorkerPid !== null &&
-    isProcessAlive(config.tunnelWorkerPid);
+  const tunnelUp = await isTunnelUp(config);
 
   return {
     serverUp,
     tunnelUp,
-    ngrokUrl: tunnelUp ? config.ngrokUrl : null,
+    tunnelUrl: tunnelUp ? getTunnelUrl(config) : null,
   };
 }
 
-function printStatus(status: ServicesStatus): void {
+function printStatus(status: ServicesStatus, config: Config): void {
   if (status.serverUp) {
     console.log(chalk.green("opencode server is running"));
   } else {
     console.log(chalk.red("opencode server is down"));
   }
 
+  const provider = config.tunnelProvider === "tailscale" ? "tailscale" : "ngrok";
   if (status.tunnelUp) {
-    console.log(chalk.green("ngrok tunnel is running"));
+    console.log(chalk.green(`${provider} tunnel is running`));
   } else {
-    console.log(chalk.red("ngrok tunnel is down"));
+    console.log(chalk.red(`${provider} tunnel is down`));
   }
 }
 
 async function ensureNgrokConfig(config: Config): Promise<void> {
+  if (config.tunnelProvider === "tailscale") return;
+
   if (config.ngrokAuthtoken !== null) return;
 
   console.log(chalk.cyan("\nFirst-time setup required.\n"));
@@ -60,7 +60,11 @@ async function ensureNgrokConfig(config: Config): Promise<void> {
 }
 
 function getAuthUrl(config: Config): string {
-  return `https://${config.username}:${config.password}@${config.ngrokUrl?.replace("https://", "")}`;
+  const url = getTunnelUrl(config);
+  if (config.tunnelProvider === "tailscale") {
+    return url!;
+  }
+  return `https://${config.username}:${config.password}@${url?.replace("https://", "")}`;
 }
 
 const program = new Command();
@@ -71,11 +75,24 @@ program
   .description("Start opencode server and ngrok tunnel")
   .action(async () => {
     const config = loadConfig();
+
+    if (config.tunnelProvider === "tailscale") {
+      const { checkTailscaleInstalled, checkTailscaleConnected } = await import("./tailscale-tunnel.js");
+      try {
+        await checkTailscaleInstalled();
+        await checkTailscaleConnected();
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.log(chalk.red(message));
+        process.exit(1);
+      }
+    }
+
     await ensureNgrokConfig(config);
 
     const status = await getServicesStatus(config);
     if (status.serverUp || status.tunnelUp) {
-      printStatus(status);
+      printStatus(status, config);
       console.log(chalk.yellow("\nServices are already running. Run 'remote down' first."));
       process.exit(1);
     }
@@ -89,10 +106,15 @@ program
       process.exit(1);
     }
     console.log(chalk.green("✅ opencode server is running") + ` (${config.hostname}:${config.port})`);
-    console.log(`   Username: ${config.username}`);
-    console.log(`   Password: ${config.password}\n`);
+    if (config.tunnelProvider === "ngrok") {
+      console.log(`   Username: ${config.username}`);
+      console.log(`   Password: ${config.password}\n`);
+    } else {
+      console.log();
+    }
 
-    console.log(chalk.blue("Starting ngrok tunnel..."));
+    const provider = config.tunnelProvider === "tailscale" ? "tailscale" : "ngrok";
+    console.log(chalk.blue(`Starting ${provider} tunnel...`));
     try {
       await startTunnel(config);
     } catch (err: unknown) {
@@ -103,9 +125,14 @@ program
     }
 
     const authUrl = getAuthUrl(config);
-    console.log(chalk.green("✅ ngrok tunnel is running"));
-    console.log(`   URL: ${chalk.underline(config.ngrokUrl!)}`);
-    console.log(`   Auth URL: ${chalk.underline(authUrl)}\n`);
+    const tunnelUrl = getTunnelUrl(config);
+    console.log(chalk.green(`✅ ${provider} tunnel is running`));
+    console.log(`   URL: ${chalk.underline(tunnelUrl!)}`);
+    if (config.tunnelProvider === "ngrok") {
+      console.log(`   Auth URL: ${chalk.underline(authUrl)}\n`);
+    } else {
+      console.log();
+    }
 
     await generateQR(authUrl);
     process.exit(0);
@@ -123,7 +150,7 @@ program
       process.exit(0);
     }
 
-    printStatus(status);
+    printStatus(status, config);
     stopTunnel(config);
     stopServer(config);
     console.log(chalk.green("\nAll services stopped."));
@@ -136,7 +163,9 @@ program
   .action(async () => {
     const config = loadConfig();
     const status = await getServicesStatus(config);
-    printStatus(status);
+    printStatus(status, config);
+    const provider = config.tunnelProvider === "tailscale" ? "tailscale" : "ngrok";
+    console.log(chalk.gray(`  Provider: ${provider}`));
     process.exit(0);
   });
 
@@ -148,17 +177,22 @@ program
     const status = await getServicesStatus(config);
 
     if (!status.serverUp || !status.tunnelUp) {
-      printStatus(status);
+      printStatus(status, config);
       console.log(chalk.yellow("\nRun 'remote up' to start all services."));
       process.exit(1);
     }
 
+    const tunnelUrl = getTunnelUrl(config);
     const authUrl = getAuthUrl(config);
-    console.log(`URL: ${chalk.underline(config.ngrokUrl!)}`);
-    console.log(`Auth URL: ${chalk.underline(authUrl)}`);
-    console.log(`Username: ${config.username}`);
-    console.log(`Password: ${config.password}`);
-    console.log(`\nAttach: opencode attach http://${config.hostname}:${config.port} --username ${config.username} --password ${config.password}\n`);
+    console.log(`URL: ${chalk.underline(tunnelUrl!)}`);
+    if (config.tunnelProvider === "ngrok") {
+      console.log(`Auth URL: ${chalk.underline(authUrl)}`);
+      console.log(`Username: ${config.username}`);
+      console.log(`Password: ${config.password}`);
+      console.log(`\nAttach: opencode attach http://${config.hostname}:${config.port} --username ${config.username} --password ${config.password}\n`);
+    } else {
+      console.log(`\nAttach: opencode attach http://${config.hostname}:${config.port}\n`);
+    }
     await generateQR(authUrl);
     process.exit(0);
   });
@@ -170,21 +204,23 @@ program
   .option("--hostname <hostname>", "Set hostname")
   .option("--port <port>", "Set port")
   .option("--authtoken <token>", "Set ngrok authtoken")
-  .action(async (options: { show?: boolean; hostname?: string; port?: string; authtoken?: string }) => {
+  .option("--provider <provider>", "Set tunnel provider (ngrok or tailscale)")
+  .action(async (options: { show?: boolean; hostname?: string; port?: string; authtoken?: string; provider?: string }) => {
     const config = loadConfig();
 
     if (options.show) {
       console.log(chalk.cyan("Current configuration:\n"));
-      console.log(`  Config file: ${chalk.gray(getConfigPath())}`);
-      console.log(`  Hostname:    ${config.hostname}`);
-      console.log(`  Port:        ${config.port}`);
-      console.log(`  Authtoken:   ${config.ngrokAuthtoken ? chalk.green("****" + config.ngrokAuthtoken.slice(-4)) : chalk.red("not set")}`);
-      console.log(`  Username:    ${config.username ?? chalk.gray("auto-generated on up")}`);
-      console.log(`  Password:    ${config.password ? "****" : chalk.gray("auto-generated on up")}`);
+      console.log(`  Config file:     ${chalk.gray(getConfigPath())}`);
+      console.log(`  Hostname:        ${config.hostname}`);
+      console.log(`  Port:            ${config.port}`);
+      console.log(`  Tunnel provider: ${config.tunnelProvider}`);
+      console.log(`  Authtoken:       ${config.ngrokAuthtoken ? chalk.green("****" + config.ngrokAuthtoken.slice(-4)) : chalk.red("not set")}`);
+      console.log(`  Username:        ${config.username ?? chalk.gray("auto-generated on up")}`);
+      console.log(`  Password:        ${config.password ? "****" : chalk.gray("auto-generated on up")}`);
       process.exit(0);
     }
 
-    const hasFlags = options.hostname || options.port || options.authtoken;
+    const hasFlags = options.hostname || options.port || options.authtoken || options.provider;
     if (hasFlags) {
       if (options.hostname) config.hostname = options.hostname;
       if (options.port) {
@@ -196,6 +232,13 @@ program
         config.port = port;
       }
       if (options.authtoken) config.ngrokAuthtoken = options.authtoken;
+      if (options.provider) {
+        if (options.provider !== "ngrok" && options.provider !== "tailscale") {
+          console.log(chalk.red("Invalid provider. Must be 'ngrok' or 'tailscale'."));
+          process.exit(1);
+        }
+        config.tunnelProvider = options.provider;
+      }
       saveConfig(config);
       console.log(chalk.green("✅ Configuration updated."));
       process.exit(0);

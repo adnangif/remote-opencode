@@ -55,7 +55,7 @@ export function Browser({ url, username, password, webViewRef, onCanGoBack }: Br
       <WebView
         ref={webViewRef}
         source={{ uri: url }}
-        basicAuthCredential={{ username, password }}
+        basicAuthCredential={username && password ? { username, password } : undefined}
         userAgent="OpencodeRemote/1.0"
         style={styles.webview}
         cacheEnabled={false}

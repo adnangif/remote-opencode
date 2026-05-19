@@ -2,13 +2,14 @@ import { fork } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Config, saveConfig } from "./config.js";
-import { killProcess, waitForIpcMessage } from "./process-utils.js";
+import { killProcess, waitForIpcMessage, isProcessAlive } from "./process-utils.js";
+import { startTailscaleTunnel, stopTailscaleTunnel, isTailscaleServeActive } from "./tailscale-tunnel.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 type TunnelReady = { type: "ready"; url: string };
 
-export async function startTunnel(config: Config): Promise<void> {
+async function startNgrokTunnel(config: Config): Promise<void> {
   const workerPath = path.join(__dirname, "tunnel-worker.js");
   const child = fork(workerPath, [config.ngrokAuthtoken!, config.hostname, String(config.port)], {
     detached: true,
@@ -27,9 +28,34 @@ export async function startTunnel(config: Config): Promise<void> {
   saveConfig(config);
 }
 
-export function stopTunnel(config: Config): void {
+function stopNgrokTunnel(config: Config): void {
   killProcess(config.tunnelWorkerPid);
   config.tunnelWorkerPid = null;
   config.ngrokUrl = null;
   saveConfig(config);
+}
+
+export async function startTunnel(config: Config): Promise<void> {
+  if (config.tunnelProvider === "tailscale") {
+    return startTailscaleTunnel(config);
+  }
+  return startNgrokTunnel(config);
+}
+
+export function stopTunnel(config: Config): void {
+  if (config.tunnelProvider === "tailscale") {
+    return stopTailscaleTunnel(config);
+  }
+  return stopNgrokTunnel(config);
+}
+
+function isNgrokActive(config: Config): boolean {
+  return config.tunnelWorkerPid !== null && isProcessAlive(config.tunnelWorkerPid);
+}
+
+export async function isTunnelUp(config: Config): Promise<boolean> {
+  if (config.tunnelProvider === "tailscale") {
+    return isTailscaleServeActive(config);
+  }
+  return isNgrokActive(config);
 }

@@ -4,10 +4,11 @@ export interface ParsedAuth {
   password: string;
 }
 
-function isNgrokLink(url: string): boolean {
+function isRecognizedUrl(url: string): boolean {
   const ngrokRegex =
     /^https:\/\/[a-zA-Z0-9-]+\.(?:ngrok-free\.app|ngrok-free\.dev|ngrok\.app|ngrok\.dev|ngrok\.pizza|ngrok-free\.pizza|ngrok\.io)(\/.*)?$/i;
-  return ngrokRegex.test(url);
+  const tailscaleRegex = /^https:\/\/[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*\.ts\.net(\/.*)?$/i;
+  return ngrokRegex.test(url) || tailscaleRegex.test(url);
 }
 
 export type ParseResult =
@@ -17,22 +18,31 @@ export type ParseResult =
 export function parseAuthUrl(rawUrl: string): ParseResult {
   try {
     const withoutProtocol = rawUrl.replace("https://", "").replace("http://", "");
-    const [credentials, hostAndPath] = withoutProtocol.split("@");
-    if (!credentials || !hostAndPath) {
-      return { ok: false, reason: "invalid_format" };
+    const atIndex = withoutProtocol.indexOf("@");
+
+    if (atIndex !== -1) {
+      const credentials = withoutProtocol.slice(0, atIndex);
+      const hostAndPath = withoutProtocol.slice(atIndex + 1);
+      const [username, password] = credentials.split(":");
+      if (!username || !password) {
+        return { ok: false, reason: "invalid_format" };
+      }
+
+      const url = `https://${hostAndPath}`;
+      if (!isRecognizedUrl(url)) {
+        return { ok: false, reason: "unrecognized_url" };
+      }
+
+      return { ok: true, data: { url, username, password } };
     }
 
-    const [username, password] = credentials.split(":");
-    if (!username || !password) {
-      return { ok: false, reason: "invalid_format" };
-    }
-
-    const url = `https://${hostAndPath}`;
-    if (!isNgrokLink(url)) {
+    // No credentials: plain URL (tailscale format)
+    const url = rawUrl.startsWith("https://") ? rawUrl : `https://${rawUrl}`;
+    if (!isRecognizedUrl(url)) {
       return { ok: false, reason: "unrecognized_url" };
     }
 
-    return { ok: true, data: { url, username, password } };
+    return { ok: true, data: { url, username: "", password: "" } };
   } catch {
     return { ok: false, reason: "invalid_format" };
   }

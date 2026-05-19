@@ -105,7 +105,7 @@ function AppInner() {
     if (!result.ok) {
       const message =
         result.reason === "unrecognized_url"
-          ? "Unrecognized URL. Only ngrok links are supported."
+          ? "Unrecognized URL. Only ngrok and Tailscale links are supported."
           : "This QR code does not contain a valid auth URL.";
       setErrorMsg(message);
       return;

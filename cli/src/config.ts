@@ -7,12 +7,18 @@ import { createInterface } from "node:readline";
 export interface Config {
   hostname: string;
   port: number;
+  tunnelProvider: "ngrok" | "tailscale";
   ngrokAuthtoken: string | null;
   username: string | null;
   password: string | null;
   ngrokUrl: string | null;
+  tailscaleUrl: string | null;
   tunnelWorkerPid: number | null;
   opencodePid: number | null;
+}
+
+export function getTunnelUrl(config: Config): string | null {
+  return config.tunnelProvider === "tailscale" ? config.tailscaleUrl : config.ngrokUrl;
 }
 
 export const CONFIG_FILENAME = ".opencode-proxy.json";
@@ -27,10 +33,12 @@ export function loadConfig(): Config {
     return {
       hostname: "localhost",
       port: 4096,
+      tunnelProvider: "ngrok",
       ngrokAuthtoken: null,
       username: null,
       password: null,
       ngrokUrl: null,
+      tailscaleUrl: null,
       tunnelWorkerPid: null,
       opencodePid: null,
     };
@@ -42,10 +50,12 @@ export function loadConfig(): Config {
     return {
       hostname: "localhost",
       port: 4096,
+      tunnelProvider: "ngrok",
       ngrokAuthtoken: null,
       username: null,
       password: null,
       ngrokUrl: null,
+      tailscaleUrl: null,
       tunnelWorkerPid: null,
       opencodePid: null,
     };
