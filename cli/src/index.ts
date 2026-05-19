@@ -28,17 +28,17 @@ async function getServicesStatus(config: Config): Promise<ServicesStatus> {
   };
 }
 
-function printStatus(status: ServicesStatus, config: Config): void {
+function printStatus(status: ServicesStatus): void {
   if (status.serverUp) {
-    console.log(chalk.green("✅ opencode server is running") + ` (${config.hostname}:${config.port})`);
+    console.log(chalk.green("opencode server is running"));
   } else {
-    console.log(chalk.red("❌ opencode server is down"));
+    console.log(chalk.red("opencode server is down"));
   }
 
   if (status.tunnelUp) {
-    console.log(chalk.green("✅ ngrok tunnel is running") + ` (${status.ngrokUrl})`);
+    console.log(chalk.green("ngrok tunnel is running"));
   } else {
-    console.log(chalk.red("❌ ngrok tunnel is down"));
+    console.log(chalk.red("ngrok tunnel is down"));
   }
 }
 
@@ -75,7 +75,7 @@ program
 
     const status = await getServicesStatus(config);
     if (status.serverUp || status.tunnelUp) {
-      printStatus(status, config);
+      printStatus(status);
       console.log(chalk.yellow("\nServices are already running. Run 'remote down' first."));
       process.exit(1);
     }
@@ -123,10 +123,10 @@ program
       process.exit(0);
     }
 
-    printStatus(status, config);
+    printStatus(status);
     stopTunnel(config);
     stopServer(config);
-    console.log(chalk.green("\n✅ All services stopped."));
+    console.log(chalk.green("\nAll services stopped."));
     process.exit(0);
   });
 
@@ -136,7 +136,7 @@ program
   .action(async () => {
     const config = loadConfig();
     const status = await getServicesStatus(config);
-    printStatus(status, config);
+    printStatus(status);
     process.exit(0);
   });
 
@@ -148,7 +148,7 @@ program
     const status = await getServicesStatus(config);
 
     if (!status.serverUp || !status.tunnelUp) {
-      printStatus(status, config);
+      printStatus(status);
       console.log(chalk.yellow("\nRun 'remote up' to start all services."));
       process.exit(1);
     }
