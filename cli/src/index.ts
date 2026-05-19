@@ -201,7 +201,8 @@ program
       process.exit(0);
     }
 
-    console.log(chalk.cyan("Interactive configuration setup\n"));
+    console.log(chalk.cyan("Interactive configuration setup"));
+    console.log(chalk.gray("Press Enter to keep existing value\n"));
     console.log(`Get your ngrok authtoken at: ${chalk.underline("https://dashboard.ngrok.com/get-started/your-authtoken")}\n`);
 
     const authtokenInput = await promptMasked("ngrok authtoken", config.ngrokAuthtoken ?? "");

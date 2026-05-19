@@ -91,8 +91,7 @@ export async function promptMasked(question: string, currentValue: string): Prom
 
   return new Promise((resolve) => {
     const suffix = currentValue ? ` (${maskToken(currentValue)})` : "";
-    const hint = currentValue ? " [press Enter to keep existing]" : "";
-    rl.question(`${question}${suffix}${hint}: `, (answer) => {
+    rl.question(`${question}${suffix}: `, (answer) => {
       rl.close();
       resolve(answer.trim());
     });
@@ -107,8 +106,7 @@ export async function promptWithDefault(question: string, defaultValue: string):
 
   return new Promise((resolve) => {
     const suffix = defaultValue ? ` (${defaultValue})` : "";
-    const hint = defaultValue ? " [press Enter to keep existing]" : "";
-    rl.question(`${question}${suffix}${hint}: `, (answer) => {
+    rl.question(`${question}${suffix}: `, (answer) => {
       rl.close();
       resolve(answer.trim() || defaultValue);
     });
