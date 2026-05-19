@@ -43,10 +43,8 @@ export async function startTunnel(config: Config): Promise<void> {
 }
 
 export function stopTunnel(config: Config): void {
-  if (config.tunnelProvider === "tailscale") {
-    return stopTailscaleTunnel(config);
-  }
-  return stopNgrokTunnel(config);
+  stopNgrokTunnel(config);
+  stopTailscaleTunnel(config);
 }
 
 function isNgrokActive(config: Config): boolean {

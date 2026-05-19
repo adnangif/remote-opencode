@@ -68,11 +68,11 @@ function getAuthUrl(config: Config): string {
 }
 
 const program = new Command();
-program.name("roc").description("Remotely access opencode via ngrok tunnel");
+program.name("roc").description("Remotely access opencode via tunnel (ngrok or tailscale)");
 
 program
   .command("up")
-  .description("Start opencode server and ngrok tunnel")
+  .description("Start opencode server and tunnel")
   .action(async () => {
     const config = loadConfig();
 
@@ -140,7 +140,7 @@ program
 
 program
   .command("down")
-  .description("Stop opencode server and ngrok tunnel")
+  .description("Stop opencode server and tunnel")
   .action(async () => {
     const config = loadConfig();
     const status = await getServicesStatus(config);
@@ -159,7 +159,7 @@ program
 
 program
   .command("status")
-  .description("Show status of opencode server and ngrok tunnel")
+  .description("Show status of opencode server and tunnel")
   .action(async () => {
     const config = loadConfig();
     const status = await getServicesStatus(config);
@@ -170,8 +170,8 @@ program
   });
 
 program
-  .command("qr")
-  .description("Generate QR code for ngrok tunnel URL")
+  .command("share")
+  .description("Show share URL and generate QR code")
   .action(async () => {
     const config = loadConfig();
     const status = await getServicesStatus(config);

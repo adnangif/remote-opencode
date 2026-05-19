@@ -7,12 +7,15 @@ async function fetchHealth(link: RecentLink): Promise<boolean> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 5_000);
 
-    const credentials = btoa(`${link.username}:${link.password}`);
+    const headers: Record<string, string> = {};
+    if (link.username && link.password) {
+      const credentials = btoa(`${link.username}:${link.password}`);
+      headers.Authorization = `Basic ${credentials}`;
+    }
+
     const res = await fetch(url, {
       signal: controller.signal,
-      headers: {
-        Authorization: `Basic ${credentials}`,
-      },
+      headers,
     });
 
     clearTimeout(timer);
