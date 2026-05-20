@@ -274,22 +274,28 @@ program
       process.exit(1);
     }
 
-    if (!config.username || !config.password) {
-      spinner.stop();
-      printErrorBox("No credentials found. Run 'roc up' first.");
-      process.exit(1);
+    if (config.tunnelProvider === "ngrok") {
+      if (!config.username || !config.password) {
+        spinner.stop();
+        printErrorBox("No credentials found. Run 'roc up' first.");
+        process.exit(1);
+      }
     }
 
     const healthy = await checkServerHealth(
       config.hostname,
       config.port,
-      config.username,
-      config.password
+      config.username ?? "",
+      config.password ?? ""
     );
 
     if (!healthy) {
       spinner.stop();
-      printErrorBox("Credentials don't match. Run 'roc down' then 'roc up' to restart.");
+      if (config.tunnelProvider === "ngrok") {
+        printErrorBox("Credentials don't match. Run 'roc down' then 'roc up' to restart.");
+      } else {
+        printErrorBox("Server health check failed. Run 'roc down' then 'roc up' to restart.");
+      }
       process.exit(1);
     }
 
@@ -299,8 +305,8 @@ program
     const tui = attachTUI(
       config.hostname,
       config.port,
-      config.username!,
-      config.password!,
+      config.username ?? "",
+      config.password ?? "",
       process.cwd()
     );
 
