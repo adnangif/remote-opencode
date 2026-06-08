@@ -1,18 +1,27 @@
 {
-  "name": "opencode-remote",
-  "version": "1.0.0",
-  "description": "CLI to remotely access opencode via ngrok tunnel with QR code",
+  "name": "opencode-rocks",
+  "version": "1.0.1",
+  "description": "CLI to remotely access opencode via ngrok or Tailscale with QR code pairing",
   "type": "module",
   "bin": {
     "roc": "./dist/index.js"
   },
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsc",
     "start": "tsx src/index.ts",
     "dev": "tsx watch src/index.ts",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "prepublishOnly": "pnpm build"
   },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT",
   "dependencies": {
     "@clack/prompts": "^1.4.0",
     "@ngrok/ngrok": "^1.5.0",
