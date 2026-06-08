@@ -1,4 +1,4 @@
-# remote-opencode
+# opencode-rocks
 
 Install:
 
