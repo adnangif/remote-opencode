@@ -51,7 +51,7 @@ roc t
 roc down
 ```
 
-Tunnel providers:
+Supported Tunnel providers:
 
 - ngrok: public HTTPS tunnel with generated basic-auth credentials.
 - Tailscale: private HTTPS tunnel on your tailnet.
