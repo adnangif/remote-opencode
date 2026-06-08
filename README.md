@@ -26,11 +26,28 @@ npm i -g opencode-rocks
 Use:
 
 ```bash
+# Configure once
 roc configure --guided
+
+# Start opencode and print a QR code
 roc up
+```
+
+Run `roc up` from the directory you want opencode to use as its working directory.
+
+While the session is running:
+
+```bash
+# Check whether the server and tunnel are running
 roc status
+
+# Print the current URL and QR code again
 roc share
+
+# Attach the local opencode TUI
 roc t
+
+# Stop the server and tunnel
 roc down
 ```
 
