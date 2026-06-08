@@ -41,6 +41,12 @@ Tunnel providers:
 
 ## Mobile app
 
+Download the Android APK from the latest GitHub release:
+
+```text
+https://github.com/adnangif/remote-opencode/releases/latest
+```
+
 Run locally:
 
 ```bash
@@ -50,6 +56,8 @@ npm run start
 ```
 
 The app supports QR codes for ngrok URLs with embedded credentials and Tailscale `*.ts.net` URLs without credentials. Recent links are stored locally on the device.
+
+Android may require allowing installs from unknown sources when installing the release APK.
 
 ## Development
 
