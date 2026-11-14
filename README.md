@@ -5,6 +5,10 @@ Opencode Remote is a companion project for controlling an `opencode` session fro
 - `cli/`: TypeScript CLI published as `opencode-rocks`; it installs the `roc` command.
 - `app/`: Expo React Native app for scanning a `roc` QR code and opening the remote opencode UI.
 
+## Requirements
+
+- opencode v2 or newer (`opencode --version`). For opencode v1, use `opencode-rocks@1`.
+
 ## How it works
 
 1. Run `roc up`.
@@ -53,8 +57,8 @@ roc down
 
 Supported Tunnel providers:
 
-- ngrok: public HTTPS tunnel with generated basic-auth credentials.
-- Tailscale: private HTTPS tunnel on your tailnet.
+- ngrok: public HTTPS tunnel. The QR code carries a generated server password.
+- Tailscale: private HTTPS tunnel on your tailnet, with no password needed. opencode v2 always requires a password, so `roc` runs a local proxy on `127.0.0.1:<port + 1>` that adds it; the tailnet is the access boundary.
 
 ## Mobile app
 

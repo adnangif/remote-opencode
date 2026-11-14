@@ -2,6 +2,7 @@ import chalk from "chalk";
 import boxen from "boxen";
 import gradient from "gradient-string";
 import ora, { Ora } from "ora";
+import { createRequire } from "node:module";
 import { Config, getTunnelUrl, getConfigPath } from "./config.js";
 
 const ROC_ASCII = [
@@ -14,6 +15,8 @@ const ROC_ASCII = [
   "  ╚═╝  ╚═╝ ╚═════╝  ╚═════╝                 ",
   "                                            ",
 ].join("\n");
+
+const { version: CLI_VERSION } = createRequire(import.meta.url)("../package.json") as { version: string };
 
 const OK = chalk.green("+");
 const FAIL = chalk.red("x");
@@ -52,7 +55,7 @@ export function printBanner(): void {
     chalk.dim("        ")
     + chalk.gray("Remote Control")
     + chalk.dim(" -- ")
-    + chalk.gray("v1.0.0")
+    + chalk.gray(`v${CLI_VERSION}`)
   );
   console.log();
 }
@@ -196,13 +199,9 @@ export function printSharePanel(config: Config): void {
     lines.push(padEndPlain(`${chalk.gray("Auth URL:")}  ${chalk.cyan.underline(authUrl)}`, col));
     lines.push(padEndPlain(`${chalk.gray("Username:")}  ${chalk.white(config.username)}`, col));
     lines.push(padEndPlain(`${chalk.gray("Password:")}  ${chalk.gray("--------")}`, col));
-    lines.push(" ".repeat(col));
-    lines.push(padEndPlain(chalk.dim(`Attach: opencode attach http://${config.hostname}:${config.port}`), col));
-    lines.push(padEndPlain(chalk.dim(`        --username ${config.username} --password ********`), col));
-  } else {
-    lines.push(" ".repeat(col));
-    lines.push(padEndPlain(chalk.dim(`Attach: opencode attach http://${config.hostname}:${config.port}`), col));
   }
+  lines.push(" ".repeat(col));
+  lines.push(padEndPlain(chalk.dim("Attach: roc t"), col));
 
   makeBox(lines.join("\n"), {
     borderColor: "magenta",

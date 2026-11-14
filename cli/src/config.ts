@@ -14,7 +14,15 @@ export interface Config {
   ngrokUrl: string | null;
   tailscaleUrl: string | null;
   tunnelWorkerPid: number | null;
+  proxyWorkerPid: number | null;
   opencodePid: number | null;
+}
+
+// opencode v2 ignores OPENCODE_SERVER_USERNAME; basic auth always uses this username.
+export const SERVER_USERNAME = "opencode";
+
+export function getProxyPort(config: Config): number {
+  return config.port + 1;
 }
 
 export function getTunnelUrl(config: Config): string | null {
@@ -27,38 +35,30 @@ export function getConfigPath(): string {
   return path.join(os.homedir(), CONFIG_FILENAME);
 }
 
+const DEFAULT_CONFIG: Config = {
+  hostname: "localhost",
+  port: 4096,
+  tunnelProvider: "ngrok",
+  ngrokAuthtoken: null,
+  username: null,
+  password: null,
+  ngrokUrl: null,
+  tailscaleUrl: null,
+  tunnelWorkerPid: null,
+  proxyWorkerPid: null,
+  opencodePid: null,
+};
+
 export function loadConfig(): Config {
   const configPath = getConfigPath();
   if (!fs.existsSync(configPath)) {
-    return {
-      hostname: "localhost",
-      port: 4096,
-      tunnelProvider: "ngrok",
-      ngrokAuthtoken: null,
-      username: null,
-      password: null,
-      ngrokUrl: null,
-      tailscaleUrl: null,
-      tunnelWorkerPid: null,
-      opencodePid: null,
-    };
+    return { ...DEFAULT_CONFIG };
   }
   try {
     const raw = fs.readFileSync(configPath, "utf-8");
-    return JSON.parse(raw) as Config;
+    return { ...DEFAULT_CONFIG, ...(JSON.parse(raw) as Partial<Config>) };
   } catch {
-    return {
-      hostname: "localhost",
-      port: 4096,
-      tunnelProvider: "ngrok",
-      ngrokAuthtoken: null,
-      username: null,
-      password: null,
-      ngrokUrl: null,
-      tailscaleUrl: null,
-      tunnelWorkerPid: null,
-      opencodePid: null,
-    };
+    return { ...DEFAULT_CONFIG };
   }
 }
 
@@ -69,7 +69,7 @@ export function saveConfig(config: Config): void {
 
 export function generateCredentials(): { username: string; password: string } {
   return {
-    username: crypto.randomBytes(8).toString("hex"),
+    username: SERVER_USERNAME,
     password: crypto.randomBytes(16).toString("hex"),
   };
 }

@@ -1,3 +1,5 @@
+> **Outdated:** this is the original v1-era plan. `server-worker.ts` was never built, and the opencode v2 changes (auth proxy, `/api/info`) are not reflected here.
+
 # Remote Control CLI — Implementation Plan
 
 ## Architecture
