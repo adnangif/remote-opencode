@@ -41,12 +41,12 @@ async function getTailscaleInfo(): Promise<{ hostname: string; tailnet: string; 
   return { hostname, tailnet, dnsName };
 }
 
-export async function startTailscaleTunnel(config: Config): Promise<void> {
+export async function startTailscaleTunnel(config: Config, targetPort: number): Promise<void> {
   await checkTailscaleInstalled();
   await checkTailscaleConnected();
 
   try {
-    await execTailscale(["serve", "--bg", `--https=443`, `localhost:${config.port}`]);
+    await execTailscale(["serve", "--bg", `--https=443`, `http://127.0.0.1:${targetPort}`]);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     if (message.includes("not enabled")) {

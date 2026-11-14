@@ -3,7 +3,7 @@ import { RecentLink } from "./storage";
 
 async function fetchHealth(link: RecentLink): Promise<boolean> {
   try {
-    const url = `${link.url}/global/health`;
+    const url = `${link.url}/api/info`;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 5_000);
 
@@ -19,7 +19,8 @@ async function fetchHealth(link: RecentLink): Promise<boolean> {
     });
 
     clearTimeout(timer);
-    return res.ok;
+    // Unknown routes fall back to the web UI's HTML, so require the JSON server info.
+    return res.ok && (res.headers.get("content-type") ?? "").includes("application/json");
   } catch {
     return false;
   }

@@ -3,7 +3,7 @@
 import chalk from "chalk";
 import { Command } from "commander";
 import { loadConfig, saveConfig, promptNgrokAuthtoken, promptMasked, promptWithDefault, getConfigPath, Config, getTunnelUrl } from "./config.js";
-import { startServer, stopServer, checkServerHealth, isServerReachable, isProcessAlive } from "./server.js";
+import { startServer, stopServer, checkServerHealth, isServerReachable, checkOpencodeVersion } from "./server.js";
 import { startTunnel, stopTunnel, isTunnelUp } from "./tunnel.js";
 import { generateQR } from "./qr.js";
 import { attachTUI } from "./tui.js";
@@ -67,6 +67,14 @@ export async function runUp(showBanner: boolean = true): Promise<void> {
   if (showBanner) printBanner();
 
   const config = loadConfig();
+
+  try {
+    await checkOpencodeVersion();
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    printErrorBox(message);
+    process.exit(1);
+  }
 
   if (config.tunnelProvider === "tailscale") {
     const { checkTailscaleInstalled, checkTailscaleConnected } = await import("./tailscale-tunnel.js");
@@ -274,41 +282,24 @@ program
       process.exit(1);
     }
 
-    if (config.tunnelProvider === "ngrok") {
-      if (!config.username || !config.password) {
-        spinner.stop();
-        printErrorBox("No credentials found. Run 'roc up' first.");
-        process.exit(1);
-      }
+    if (!config.username || !config.password) {
+      spinner.stop();
+      printErrorBox("No credentials found. Run 'roc down' then 'roc up' to restart.");
+      process.exit(1);
     }
 
-    const healthy = await checkServerHealth(
-      config.hostname,
-      config.port,
-      config.username ?? "",
-      config.password ?? ""
-    );
+    const healthy = await checkServerHealth(config.hostname, config.port, config.username, config.password);
 
     if (!healthy) {
       spinner.stop();
-      if (config.tunnelProvider === "ngrok") {
-        printErrorBox("Credentials don't match. Run 'roc down' then 'roc up' to restart.");
-      } else {
-        printErrorBox("Server health check failed. Run 'roc down' then 'roc up' to restart.");
-      }
+      printErrorBox("Credentials don't match. Run 'roc down' then 'roc up' to restart.");
       process.exit(1);
     }
 
     spinner.succeed(chalk.green("Server is healthy"));
     console.log(chalk.cyan("Attaching TUI...\n"));
 
-    const tui = attachTUI(
-      config.hostname,
-      config.port,
-      config.username ?? "",
-      config.password ?? "",
-      process.cwd()
-    );
+    const tui = attachTUI(config.hostname, config.port, config.password, process.cwd());
 
     tui.on("exit", (code) => {
       process.exit(code ?? 0);

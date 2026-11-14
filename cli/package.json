@@ -1,6 +1,6 @@
 {
   "name": "opencode-rocks",
-  "version": "1.0.1",
+  "version": "2.0.0",
   "description": "CLI to remotely access opencode via ngrok or Tailscale with QR code pairing",
   "type": "module",
   "bin": {
