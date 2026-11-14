@@ -1,5 +1,7 @@
 # Opencode Remote
 
+> **Supports opencode v2 only.** opencode v1 is not supported. If you're still on v1, use `npm i -g opencode-rocks@1` or upgrade opencode with `opencode upgrade`.
+
 Opencode Remote is a companion project for controlling an `opencode` session from a phone. It includes a published CLI package and a mobile app:
 
 - `cli/`: TypeScript CLI published as `opencode-rocks`; it installs the `roc` command.
@@ -7,7 +9,7 @@ Opencode Remote is a companion project for controlling an `opencode` session fro
 
 ## Requirements
 
-- opencode v2 or newer (`opencode --version`). For opencode v1, use `opencode-rocks@1`.
+- opencode v2 (check with `opencode --version`). `roc up` refuses to start on opencode v1.
 
 ## How it works
 
